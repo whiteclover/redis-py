@@ -27,3 +27,6 @@ class CannotConnectError(RedisError):
 
 class ConnectionError(ServerError):
     pass
+
+
+class TimeoutError(ServerError): pass
