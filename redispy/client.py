@@ -56,15 +56,17 @@ class Client(object):
             self.connection.disconnect()
 
     def __getattr__(self, cmd):
-
         def _(*args, **kwargs):
-
-            cmd = self.proile.get(cmd)
-            cmd.bind(args, kwargs)
-            self.write(cmd)
-            self.read(cmd)
-            return cmd.response()
+            return self.execute(cmd, args, kwargs)
         return _
+
+
+    def execute(self, cmd, args, kwargs):
+        cmd = self.proile.get(cmd)
+        cmd.bind(args, kwargs)
+        self.write(cmd)
+        self.read(cmd)
+        return cmd.response()
 
     @io
     def read(self, command):
