@@ -11,13 +11,14 @@ setup(
     description = "An Other Redis Client for Python",
     author = 'Thomas Huang',
     url = 'https://github.com/thomashuang/redis-py',
-    packages = ['redispy', 'redispy.connection'],
+    packages = ['redispy', 'redispy.connection', 'redispy.profile'],
     install_requires = ['setuptools'],
     classifiers=[
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
-        'Topic :: Internet :: Proxy Servers',
+        'Topic :: Internet :: Redis Client',
         ],
     long_description=long_description,
+    platform='any'
 )
