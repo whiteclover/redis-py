@@ -26,7 +26,6 @@ class BaseStream(object):
     CRLF = '\r\n'
 
     def __init__(self):
-        super(BaseStream, self).__init__()
         self._in_buffer = ''
         self._close_callback = None
         self._connected = False
@@ -49,12 +48,12 @@ class Stream(BaseStream):
     """docstring for stream"""
 
     def __init__(self):
-        super(Stream, self).__init__()
+        BaseStream.__init__(self)
 
     def gets(self):
         crlf_index = self._in_buffer.find(self.CRLF)
         while crlf_index == -1:
-            self._in_buffer += self._read_from_socket(1024)
+            self._in_buffer += self._read_from_socket(4096)
             crlf_index = self._in_buffer.find(self.CRLF)
         i = crlf_index + len(self.__class__.CRLF)
         result = self._in_buffer[0:i]
@@ -67,7 +66,7 @@ class Stream(BaseStream):
             result += self._read_from_socket(nbytes - len(self._in_buffer))
         else:
             result = self._in_buffer[0:nbytes]
-            self._buffer = self._in_buffer[nbytes:]
+            self._in_buffer = self._in_buffer[nbytes:]
         return result
 
     def write(self, data):

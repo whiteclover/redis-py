@@ -1,64 +1,70 @@
+#!/usr/bin/env python
+
+
 class ResponseReaderTrait(object):
 
-	def  read(self, connection):pass
+    def read(self, connection):
+        pass
 
 
 class ResponseHandleTrait(object):
 
-	def handle(self, connection, payload):pass
-
+    def handle(self, connection, payload):
+        pass
 
 
 class AbstractProtocol(ResponseReaderTrait):
 
-	def write(self, connection, command):
-		pass
+    def write(self, connection, command):
+        pass
 
-	def set_option(self, option, value):
-		pass
+    def set_option(self, option, value):
+        pass
+
 
 class CommandSerializerTrait(object):
 
+    def serialize(self, command):
+        pass
 
-	def serialize(self, command):
-		pass
 
+class ComposableProtocolTrait(AbstractProtocol):
 
-class ComposableProtocolTrait(AbstractPrptocol):
+    def set_serializer(self, serializer):
+        pass
 
-	def set_serializer(self, serializer):
-		pass
+    def get_serializer(self):
+        pass
 
-	def get_serializer(self):
-		pass
+    def get_reader(self):
+        pass
 
-	def get_reader(self): pass
-
-	def set_reader(self, reader): pass
-
+    def set_reader(self, reader):
+        pass
 
 
 class ComposableTextProtocol(ComposableProtocolTrait):
 
-	def __init__(self, options={}):
+    def __init__(self, options={}):
         self._serializer = None
         self._reader = None
 
-		self.set_serializer(TextCommandSerializer())
+        self.set_serializer(TextCommandSerializer())
         self.set_reader(TextResponseReader())
         if options:
             self.initialize_options(options)
 
     def initialize_options(self, options):
-        for k ,v in options.items():
-            self.set_option(k ,v)
+        for k, v in options.items():
+            self.set_option(k, v)
 
     def set_option(self, key, value):
         if key == 'iterable_multibulk':
-            handler = ResponseMultiBulkStreamHandler() if value else ResponseMultiBulkHandler()
+            handler = ResponseMultiBulkStreamHandler(
+            ) if value else ResponseMultiBulkHandler()
             return
-        raise InvalidArgumentException('"The option $option is not supported by the current protocol"')
-
+        raise Exception(
+            '"The option $option is not supported by the current protocol"')
 
     def serialize(self, command):
         self._serializer.serialize(command)
@@ -69,19 +75,17 @@ class ComposableTextProtocol(ComposableProtocolTrait):
     def read(self, connection):
         return self._reader.read(connection)
 
-
     def set_serializer(self, serializer):
         self._serializer = serializer
+
     def get_serializer(self):
         return self._serializer
 
     def get_reader(self, reader):
         return self._reader
 
-
     def set_reader(self, reader):
         self._reader = reader
-
 
 
 class ResponseMultiBulkHandler(ResponseHandleTrait):
@@ -89,7 +93,7 @@ class ResponseMultiBulkHandler(ResponseHandleTrait):
     def handle(self, connection, data):
         length = int(lengthString)
         if length >= 0:
-            return connection.read_bytes(length+2)[:-2]
+            return connection.read_bytes(length + 2)[:-2]
         else:
             return ''
 
@@ -98,7 +102,6 @@ class ResponseErrorHandler(ResponseHandleTrait):
 
     def handle(self, connection, err_msg):
         return ResponseError(err_msg)
-
 
 
 class ResponseIntegerHandler(ResponseHandleTrait):
@@ -110,7 +113,7 @@ class ResponseIntegerHandler(ResponseHandleTrait):
         if number:
             return CommunicationException.handle(ProtocolException(
                 connection, "Cannot parse '$number' as numeric response"))
-        
+
         return None
 
 
@@ -120,8 +123,8 @@ class ResponseMultiBulkHandler(ResponseHandleTrait):
         length = len(data)
         l = []
         if length > 0:
-            cache  = {}
-            reader = connection,get_protocol().get_reader()
+            cache = {}
+            reader = connection, get_protocol().get_reader()
             for i in range(length):
                 header = connection.readline()
                 prefix = header[0]
@@ -142,6 +145,7 @@ class ResponseMultiBulkStreamHandler(ResponseHandleTrait):
 
 
 class ResponseStatusHandler(ResponseHandleTrait):
+
     def handle(self, connection, status):
         if status == 'OK':
             return True
@@ -169,7 +173,8 @@ class TextCommandSerializer(CommandSerializerTrait):
 
         return buffer
 
-class TextProtocol(AbstractPrptocol):
+
+class TextProtocol(AbstractProtocol):
     NEWLINE = '\r\n'
     OK = 'OK'
     ERROR = 'ERR'
@@ -185,10 +190,8 @@ class TextProtocol(AbstractPrptocol):
     BUFFER_SIZE = 4096
 
     def __init__(self):
-        self._mbiterable  = False
+        self._mbiterable = False
         self._serializer = TextCommandSerializer()
-
-
 
     def write(self, connection, command):
         connection.writebytes(self._serializer.serialize(command))
@@ -206,9 +209,9 @@ class TextProtocol(AbstractPrptocol):
 
         if prefix == '$':
             size = len(payload)
-            if size  == 0:
+            if size == 0:
                 return ''
-            return connection.read_bytes(size+2)[0:-2]
+            return connection.read_bytes(size + 2)[0:-2]
 
         if prefix == '*':
             length = int(payload)
@@ -218,7 +221,7 @@ class TextProtocol(AbstractPrptocol):
             if self._mbiterable:
                 return MultiBulkResponseSimple(connection, length)
             multibulk = []
-            for i in  range(length):
+            for i in range(length):
                 multibulk.append(self.read(connection))
             return multibulk
 
@@ -228,39 +231,33 @@ class TextProtocol(AbstractPrptocol):
         if prefix == '-':
             return ResponseError(payload)
 
-        return CommunicationException.handle(ProtocolException(
+        return CommunicationError.handle(ProtocolError(
             connection, "Unknown prefix: '$prefix'"))
-
-
 
     def set_option(self, key, value):
         if key == 'iterable_multibulk':
-            return._mbiterable(bool(value))
+            return self._mbiterable(bool(value))
 
 
 class TextResponseReader(ResponseReaderTrait):
-
-
 
     def __init__(self):
         self._handlers = self.defaulthandlers()
 
     def default_handlers(self):
         return {
-            TextProtocol.PREFIX_STATUS : ResponseStatusHandler(),
-            TextProtocol.PREFIX_ERROR : ResponseErrorHandler(),
+            TextProtocol.PREFIX_STATUS: ResponseStatusHandler(),
+            TextProtocol.PREFIX_ERROR: ResponseErrorHandler(),
             TextProtocol.PREFIX_INTEGER: ResponseIntegerHandler(),
             TextProtocol.PREFIX_BULK: ResponseBulkHandler(),
             TextProtocol.PREFIX_MULTI_BULK: ResponseMultiBulkHandler()
         }
 
-
     def get_handler(self, prefix):
-        return self._handlers.get(prefix):
+        return self._handlers.get(prefix)
 
     def set_handler(self, prefix, handler):
         self._handlers[prefix] = handler
-
 
     def read(self, connection):
         line = connection.readline()
@@ -274,6 +271,4 @@ class TextResponseReader(ResponseReaderTrait):
         return handler.handle(connection, line[1:])
 
     def protocol_error(self, connection, msg):
-        CommunicationException.handle(ProtocolException(connection, msg))
-
-
+        CommunicationError.handle(ProtocolError(connection, msg))

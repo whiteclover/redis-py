@@ -35,3 +35,9 @@ class TimeoutError(ServerError):
 
 class ResponseError(RedisError):
     pass
+
+class ClientError(RedisError):
+	pass
+
+class ClientNotSupportedError(ClientError):
+	pass
