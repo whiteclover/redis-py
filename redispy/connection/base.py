@@ -13,6 +13,63 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+class BaseConnection(object):
+
+    def __init__(self, options):
+        self.options = options
+
+        self.stream = None
+        self.cachedId = None
+        self.init_cmds = []
+
+    def __del__(self):
+        self.disconnect()
+
+
+    def check_options(self, options):
+       if options['scheme'] == 'unix':
+            if path not in options:
+                raise InvalidArgumentException('Missing UNIX domain socket path')
+
+        if options['scheme'] == 'tcp':
+            return options
+
+        raise InvalidArgumentException('Invalid scheme')
+
+    def create_resource(self):
+        pass
+
+
+    def is_connected(self):
+        return bool(self.stream.socket)
+
+
+    def get_resource(self):
+        self.stream.ensure_connect()
+        return self.stream
+
+
+    def push_init_command(self, command):
+        self.init_cmds.apped(command)
+
+
+    def execute_command(self, command):
+        self.write_command(command)
+        return self.read_response(command)
+
+    def read_response(self, command):
+        return self.read()
+
+
+    def on_connection_error(self, message, code=None):
+        CommunicationException.handle(ConnectionError(self, 
+            "$message [{$this->parameters->scheme}://{$this->getIdentifier()}]", code))
+
+
+    def on_protocol_error(self, message):
+        CommunicationException.handle( ProtocolError(self, 
+            "$message [{$this->parameters->scheme}://{$this->getIdentifier()}]"))
+
 
 
 class Reader(object):
@@ -29,7 +86,6 @@ class Reader(object):
             self.poll_timeout = float(self.poll_timeout / 1000)
             self.poller = None
 
-    @property
     def readable(self):
         if self.poller:
             events = self.poller.poll(self.poll_timeout)
@@ -48,7 +104,7 @@ class RedisSocket(Stream):
     CRLF = '\r\n'
 
     def __init__(self,  host='127.0.0.1', port=6379,
-                 path=None, ioloop=None, timeout=1):
+                 path=None, timeout=2):
         super(RedisSocket, self).__init__()
         self.host = host
         self.port = port
@@ -56,6 +112,15 @@ class RedisSocket(Stream):
         self.timeout = timeout
         self.connect()
         self.sent_size = 1024
+
+
+    def readable(self);
+        self.read_poller.readable()
+
+
+    def ensure_connect(self):
+        if not self.socket:
+            self.connect()
 
     def connect(self):
         try:
@@ -115,7 +180,7 @@ class RedisSocket(Stream):
                 data = self.socket.recv(nbytes)
                 return data
             except errno.EWOULDBLOCK, errno.EAGAIN:
-                if self.read_poller.readable:
+                if self.readable():
                     continue 
             except socket.timeout:
                 return '' 

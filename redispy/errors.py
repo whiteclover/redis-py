@@ -29,4 +29,9 @@ class ConnectionError(ServerError):
     pass
 
 
-class TimeoutError(ServerError): pass
+class TimeoutError(ServerError):
+    pass
+
+
+class ResponseError(RedisError):
+    pass
