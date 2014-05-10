@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+
+
 import socket
 import logging
 import select
@@ -18,40 +21,35 @@ class BaseConnection(object):
     def __init__(self, options):
         self.options = options
 
-        self.stream = None
         self.cachedId = None
         self.init_cmds = []
 
     def __del__(self):
         self.disconnect()
 
+    # def check_options(self, options):
+    #    if options['scheme'] == 'unix':
+    #         if path not in options:
+    #             raise Exception(
+    #                 'Missing UNIX domain socket path')
 
-    def check_options(self, options):
-       if options['scheme'] == 'unix':
-            if path not in options:
-                raise InvalidArgumentException('Missing UNIX domain socket path')
+    #     if options['scheme'] == 'tcp':
+    #         return options
 
-        if options['scheme'] == 'tcp':
-            return options
-
-        raise InvalidArgumentException('Invalid scheme')
+    #     raise Exception('Invalid scheme')
 
     def create_resource(self):
         pass
 
-
     def is_connected(self):
         return bool(self.stream.socket)
-
 
     def get_resource(self):
         self.stream.ensure_connect()
         return self.stream
 
-
     def push_init_command(self, command):
         self.init_cmds.apped(command)
-
 
     def execute_command(self, command):
         self.write_command(command)
@@ -60,16 +58,13 @@ class BaseConnection(object):
     def read_response(self, command):
         return self.read()
 
-
     def on_connection_error(self, message, code=None):
-        CommunicationException.handle(ConnectionError(self, 
-            "$message [{$this->parameters->scheme}://{$this->getIdentifier()}]", code))
-
+        CommunicationException.handle(ConnectionError(self,
+                                                      "$message [{$this->parameters->scheme}://{$this->getIdentifier()}]", code))
 
     def on_protocol_error(self, message):
-        CommunicationException.handle( ProtocolError(self, 
-            "$message [{$this->parameters->scheme}://{$this->getIdentifier()}]"))
-
+        CommunicationException.handle(ProtocolError(self,
+                                                    "$message [{$this->parameters->scheme}://{$this->getIdentifier()}]"))
 
 
 class Reader(object):
@@ -95,7 +90,6 @@ class Reader(object):
             return bool(r)
 
 
-
 class RedisSocket(Stream):
 
     READ = 0x0001
@@ -105,7 +99,7 @@ class RedisSocket(Stream):
 
     def __init__(self,  host='127.0.0.1', port=6379,
                  path=None, timeout=2):
-        super(RedisSocket, self).__init__()
+        Stream.__init__(self)
         self.host = host
         self.port = port
         self.path = path
@@ -113,10 +107,8 @@ class RedisSocket(Stream):
         self.connect()
         self.sent_size = 1024
 
-
-    def readable(self);
+    def readable(self):
         self.read_poller.readable()
-
 
     def ensure_connect(self):
         if not self.socket:
@@ -157,7 +149,7 @@ class RedisSocket(Stream):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
         sock.settimeout(self.timeout)
-        sock.setblocking(False)
+        # sock.setblocking(False)
         sock.connect((self.host, self.port))
         return sock
 
@@ -176,13 +168,13 @@ class RedisSocket(Stream):
 
     def _read_from_socket(self, nbytes):
         while True:
-            try: 
+            try:
                 data = self.socket.recv(nbytes)
                 return data
             except errno.EWOULDBLOCK, errno.EAGAIN:
                 if self.readable():
-                    continue 
+                    continue
             except socket.timeout:
-                return '' 
+                return ''
             except socket.error as error:
                 return ''
