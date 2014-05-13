@@ -101,3 +101,38 @@ class StreamConnection(BaseConnection):
             buffer += "$" + str(len(arg)) + '\r\n' + str(arg) + '\r\n'
         LOGGER.debug('Buffer : %r', buffer)
         self.write(buffer)
+
+import threading
+
+class ConnectionPool(object):
+
+
+    def __init__(self, host, port, db, password=None, path=None, max_conn = 10, 
+        initializer = StreamConnection):
+        self.host = host
+        self.port = port
+        self.db = db
+        self.password = password
+        self.path = path
+        self._pool = []
+        self.created = 0
+        self.max_conn = max_conn
+        self.lock = threading.RLock()
+        self.initializer = initializer
+
+    def newcon(self):
+       return  self.initializer(self.host, self.port, self.db, self.password, self.path)
+
+    def putcon(self, con):
+        self._pool.append(con)
+        
+    def getcon(self, con):
+        self.lock.acquire()
+        try:
+            return self._pool.pop(0)
+        except Except:
+            if self.created < self.max_conn:
+                self.created += 1
+                return self.newcon()
+        finally:
+            self.lock.release()
