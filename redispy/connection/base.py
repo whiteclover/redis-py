@@ -27,16 +27,15 @@ class BaseConnection(object):
     def __del__(self):
         self.disconnect()
 
-    # def check_options(self, options):
-    #    if options['scheme'] == 'unix':
-    #         if path not in options:
-    #             raise Exception(
-    #                 'Missing UNIX domain socket path')
+    def check_options(self, options):
+        if options['scheme'] == 'unix':
+            if path not in options:
+                raise Exception(
+                    'Missing UNIX domain socket path')
+        if options['scheme'] == 'tcp':
+            return options
 
-    #     if options['scheme'] == 'tcp':
-    #         return options
-
-    #     raise Exception('Invalid scheme')
+        raise Exception('Invalid scheme')
 
     def create_resource(self):
         pass
@@ -133,6 +132,7 @@ class RedisSocket(Stream):
             logger.error(error)
         self._connecting = False
         self.read_poller = Reader(self.fileno())
+        self.clear()
 
             # return error
     def clear(self):
@@ -162,7 +162,7 @@ class RedisSocket(Stream):
 
     def _write_to_socket(self, data):
         sent = 0
-        if sent < len(data):
+        while sent < len(data):
             sent += self.socket.send(data[sent:])
         return sent
 
